@@ -122,6 +122,7 @@ function Get-LineageBuildFile ($DeviceSerialNumber, $outFile) {
 
 function Expand-BootImage ($DeviceSerialNumber, $zipFilePath, $outDirectory) {
     Write-Log -Level 'INFO' -Message "Opening '$zipFilePath'."
+    Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
     $zipFile = [System.IO.Compression.ZipFile]::OpenRead($zipFilePath)
     
     if ($zipFile.Entries.Name -contains 'payload.bin') {
