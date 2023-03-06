@@ -106,22 +106,16 @@ function New-TempDirectory {
     New-Item -Path $randomString -ItemType Directory
 }
 
-function Get-LineageBuildFile ($DeviceSerialNumber, $outFile) {
-    $lineageDevice = $(adb -s $DeviceSerialNumber shell getprop ro.lineage.device) -replace "`n|`r|`t",''
+function Copy-LineageBuildFile ($DeviceSerialNumber, $lineageUpdatesPath, $destinationFilePath) {
     $lineageVersion = $(adb -s $DeviceSerialNumber shell getprop ro.lineage.version) -replace "`n|`r|`t",''
-    $lineageBuildUri = ((Invoke-WebRequest -Uri "https://download.lineageos.org/$lineageDevice").links |
-        Where-Object {$_.innerText -match "$lineageVersion-signed.zip"} | Select-Object -First 1).href
-
-    $ProgressPreference = 'SilentlyContinue'
-    Write-Log -Level 'INFO' -Message "Downloading Lineage build from '$lineageBuildUri'."
-    Invoke-WebRequest -Uri $lineageBuildUri -OutFile $outFile
-    $ProgressPreference = 'Continue'
-
-    Get-Item -Path $outFile
+    $sourceFilePath = $(Join-Path -Path $lineageUpdatesPath -ChildPath "lineage-$($lineageVersion.ToLower())-signed.zip") -replace '\\','/'
+    Write-Log -Level 'INFO' -Message "Pulling Lineage build file from '$sourceFilePath' to '$destinationFilePath'."
+    adb -s $DeviceSerialNumber pull $sourceFilePath $destinationFilePath
 }
 
 function Expand-BootImage ($DeviceSerialNumber, $zipFilePath, $outDirectory) {
     Write-Log -Level 'INFO' -Message "Opening '$zipFilePath'."
+    Add-Type -AssemblyName 'System.IO.Compression', 'System.IO.Compression.FileSystem'
     $zipFile = [System.IO.Compression.ZipFile]::OpenRead($zipFilePath)
     
     if ($zipFile.Entries.Name -contains 'payload.bin') {
@@ -203,8 +197,8 @@ try {
     Install-PythonPackage @('protobuf<3.20', 'six')
     
     $tempDirectory = New-TempDirectory
-    $lineageBuildFile = Get-LineageBuildFile $DeviceSerialNumber "$($tempDirectory.FullName)/lineage.zip"
-    $bootImage = Expand-BootImage $DeviceSerialNumber $lineageBuildFile.FullName $tempDirectory
+    Copy-LineageBuildFile $DeviceSerialNumber '/data/lineageos_updates' "$tempDirectory/lineage.zip"
+    $bootImage = Expand-BootImage $DeviceSerialNumber "$tempDirectory/lineage.zip" $tempDirectory
     
     Copy-FileToDevice $DeviceSerialNumber $bootImage.FullName '/sdcard/Download/boot.img'
     Invoke-MagiskBootPatchScript '/sdcard/Download/boot.img' '/sdcard/Download/patched-boot.img'
