@@ -134,9 +134,9 @@ function Expand-BootImage ($DeviceSerialNumber, $zipFilePath, $outDirectory) {
     $zipFile.Dispose()
         
     if ($fileName -eq 'payload.bin') {
-        Invoke-WebRequest -Uri 'https://github.com/LineageOS/scripts/archive/refs/heads/master.zip' -OutFile "$outDirectory/scripts.zip"
+        Invoke-WebRequest -Uri 'https://codeload.github.com/LineageOS/scripts/zip/dd225e1cebc81f693ac1b981ac853cf819321b49' -OutFile "$outDirectory/scripts.zip"
         [System.IO.Compression.ZipFile]::ExtractToDirectory("$outDirectory/scripts.zip", $outDirectory)
-        python3 "$outDirectory/scripts-master/update-payload-extractor/extract.py" --partitions boot --output_dir $outDirectory "$outDirectory/payload.bin"
+        python3 "$outDirectory/scripts-dd225e1cebc81f693ac1b981ac853cf819321b49/update-payload-extractor/extract.py" --partitions boot --output_dir $outDirectory "$outDirectory/payload.bin"
     }
 
     Get-Item -Path "$outDirectory/boot.img"
@@ -203,7 +203,7 @@ try {
     Copy-FileToDevice $DeviceSerialNumber $bootImage.FullName '/sdcard/Download/boot.img'
     Invoke-MagiskBootPatchScript '/sdcard/Download/boot.img' '/sdcard/Download/patched-boot.img'
     Copy-FileToComputer $DeviceSerialNumber '/sdcard/Download/patched-boot.img' "$tempDirectory/patched-boot.img"
-    
+
     Restart-Bootloader $DeviceSerialNumber
     Invoke-FlashBootImage $DeviceSerialNumber "$tempDirectory/patched-boot.img"
     Restart-Device $DeviceSerialNumber
